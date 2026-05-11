@@ -22,10 +22,6 @@ Incorporating prior knowledge into pre-training models has shown promise for clo
 
 ![The framework of the LUKE-Graph method](figures/luke_graph_framework.JPG)
 
-<p align="center">
-  <em>Fig. 1: The framework of the LUKE-Graph method.</em>
-</p>
-
 The LUKE-Graph method comprises two primary components:
 
 ### 1. Transformer-based Module (Entity-aware Representations)
