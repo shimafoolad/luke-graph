@@ -1,0 +1,16 @@
+# Core deep learning
+torch>=1.9.0
+transformers>=4.10.0
+
+# Graph neural networks
+torch-geometric>=2.0.0
+torch-scatter>=2.0.8
+torch-sparse>=0.6.12
+
+# LUKE (install from source: https://github.com/studio-ousia/luke)
+# luke @ git+https://github.com/studio-ousia/luke.git
+
+# CLI and utilities
+click>=7.0
+tqdm>=4.62.0
+numpy>=1.21.0
