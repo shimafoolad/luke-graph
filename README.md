@@ -65,32 +65,6 @@ Input passage + query
 
 ---
 
-## Repository Structure
-
-```
-luke_graph/
-├── __init__.py
-├── main.py                  # Training & evaluation CLI entrypoint
-├── model.py                 # LukeGraphForEntitySpanQA + GatedRGCN
-├── requirements.txt
-├── setup.py
-│
-├── data/                    # Data loading and feature extraction
-│   ├── __init__.py
-│   ├── constants.py         # Special token strings
-│   ├── processor.py         # InputExample, RecordProcessor
-│   └── features.py          # InputFeatures, convert_examples_to_features
-│
-├── graph/                   # Graph construction
-│   └── __init__.py          # build_entity_graph, relation type constants
-│
-└── evaluation/              # Metrics
-    ├── __init__.py
-    └── record_eval.py       # EM / F1 evaluation (ReCoRD official script)
-```
-
----
-
 ## Installation
 
 ### 1. Clone and install LUKE
