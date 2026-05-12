@@ -22,17 +22,163 @@ Incorporating prior knowledge into pre-training models has shown promise for clo
 
 ![The framework of the LUKE-Graph method](figures/luke_graph_framework.JPG)
 
-The LUKE-Graph method comprises two primary components:
+---
 
-### 1. Transformer-based Module (Entity-aware Representations)
-- Uses the pre-trained **LUKE** language model, which treats words and entities in a document as separate input tokens.
-- Delivers contextualized representations via an **entity-aware self-attention mechanism**.
+### Architecture
 
-### 2. Graph-based Module (Relation-aware Representations)
-- Constructs a **heterogeneous graph** connecting entities within a sentence and across different sentences — based on intuitive relationships in the document, without external KGs.
-- Incorporates LUKE's contextualized entity representations into a **two-layer Relational Graph Attention Network (RGAT)** to resolve entity relationships before answering questions.
-- Augments each RGAT layer with a **question-based gating mechanism** — called **Gated-RGAT** — which controls question information during graph convolution to emulate the human reasoning process of selecting the most suitable entity candidate.
-- A linear classifier scores each candidate entity, and the highest-scoring candidate is selected as the final answer.
+```
+Input passage + query
+        │
+        ▼
+┌───────────────────────┐
+│  LUKE Transformer      │   (entity-aware self-attention)
+│  Encoder               │
+└──────────┬────────────┘
+           │  word states       entity states
+           │      │                  │
+           │      └──────┐     ┌─────┘
+           │             ▼     ▼
+           │      ┌──────────────────┐
+           │      │  Gated RGCN      │   3 relation types:
+           │      │  (2 layers)      │   • placeholder ↔ entity
+           │      │                  │   • co-sentence
+           └─────►│  Question-aware  │   • co-reference
+                  │  Gate            │
+                  └────────┬─────────┘
+                           │ updated entity states
+                           ▼
+                  ┌─────────────────┐
+                  │  Linear Scorer  │   concat([PLACEHOLDER], entity_i)
+                  └────────┬────────┘
+                           │
+                           ▼
+                    Predicted answer entity
+```
+
+### Edge Relation Types
+
+| Type | Label | Description |
+|------|-------|-------------|
+| 0 | Placeholder | Bidirectional edges between every entity node and the `[PLACEHOLDER]` node |
+| 1 | Co-sentence | Edges between distinct entity occurrences in the **same sentence** |
+| 2 | Co-reference | Edges between entity occurrences sharing the **same surface text** across different sentences |
+
+---
+
+## Repository Structure
+
+```
+luke_graph/
+├── __init__.py
+├── main.py                  # Training & evaluation CLI entrypoint
+├── model.py                 # LukeGraphForEntitySpanQA + GatedRGCN
+├── requirements.txt
+├── setup.py
+│
+├── data/                    # Data loading and feature extraction
+│   ├── __init__.py
+│   ├── constants.py         # Special token strings
+│   ├── processor.py         # InputExample, RecordProcessor
+│   └── features.py          # InputFeatures, convert_examples_to_features
+│
+├── graph/                   # Graph construction
+│   └── __init__.py          # build_entity_graph, relation type constants
+│
+└── evaluation/              # Metrics
+    ├── __init__.py
+    └── record_eval.py       # EM / F1 evaluation (ReCoRD official script)
+```
+
+---
+
+## Installation
+
+### 1. Clone and install LUKE
+
+```bash
+git clone https://github.com/studio-ousia/luke.git
+cd luke
+pip install -e .
+cd ..
+```
+
+### 2. Install LUKE-Graph
+
+```bash
+git clone https://github.com/<your-username>/luke-graph.git
+cd luke-graph
+pip install -e .
+```
+
+### 3. Install PyTorch Geometric
+
+Follow the [official installation guide](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) for your CUDA version.  For example:
+
+```bash
+pip install torch-scatter torch-sparse torch-geometric \
+    -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
+```
+
+---
+
+## Data
+
+Download the [ReCoRD dataset](https://sheng-z.github.io/ReCoRD-explorer/) and place the files as:
+
+```
+data/
+└── record/
+    ├── train.json
+    └── dev.json
+```
+
+Download the LUKE pre-trained model weights from the [LUKE releases page](https://github.com/studio-ousia/luke/releases).
+
+---
+
+## Usage
+
+### Training
+
+```bash
+python -m luke_graph.main entity-span-qa run \
+    --data-dir data/record \
+    --num-train-epochs 2 \
+    --train-batch-size 1 \
+    --seed 4
+```
+
+### Evaluation only (with a saved checkpoint)
+
+```bash
+python -m luke_graph.main entity-span-qa run \
+    --data-dir data/record \
+    --no-train \
+    --checkpoint-file outputs/record/pytorch_model.bin
+```
+
+### Standalone evaluation script
+
+```bash
+python -m luke_graph.evaluation.record_eval \
+    data/record/dev.json \
+    outputs/record/predictions.json \
+    --output-correct-ids
+```
+
+---
+
+## Key Hyperparameters
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--max-seq-length` | 512 | Maximum total token sequence length |
+| `--max-query-length` | 90 | Maximum query tokens |
+| `--doc-stride` | 128 | Sliding window stride for long documents |
+| `--num-train-epochs` | 2.0 | Number of training epochs |
+| `--train-batch-size` | 1 | Training batch size per GPU |
+| `--eval-batch-size` | 32 | Evaluation batch size |
+| `--seed` | 4 | Random seed |
 
 ---
 
